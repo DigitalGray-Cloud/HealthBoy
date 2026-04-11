@@ -900,16 +900,23 @@ header h1 {
 
 .feedback-form-stack {
     display: grid;
-    gap: 0.55rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
 }
 
-.feedback-form-stack input {
+.feedback-form-stack input,
+.feedback-form-stack textarea {
     width: 100%;
     background: #ffffff;
     border: 1px solid var(--line);
     color: #0f172a;
     padding: 0.9rem 1rem;
     border-radius: 10px;
+}
+
+.feedback-form-stack .feedback-label:nth-of-type(3),
+.feedback-form-stack textarea {
+    grid-column: 1 / -1;
 }
 
 .feedback-label {
@@ -996,6 +1003,11 @@ header h1 {
     .feedback-form-stack,
     .ai-model-grid {
         grid-template-columns: 1fr;
+    }
+
+    .feedback-form-stack .feedback-label:nth-of-type(3),
+    .feedback-form-stack textarea {
+        grid-column: auto;
     }
 
     .feedback-form-actions,
