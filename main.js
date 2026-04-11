@@ -904,12 +904,12 @@ async function sendReportEmail() {
     });
 
     const body = [
-        `[헬스 보이 40F] ${currentMonth} 리포트`,
+        `[헬스보이 40F] ${currentMonth} 리포트`,
         `총 운동일: ${daySet.size}일`,
         `총 세트: ${totalSets}세트`
     ].join('\n');
 
-    const subject = encodeURIComponent(`[헬스 보이 40F] ${currentMonth} 월별 리포트`);
+    const subject = encodeURIComponent(`[헬스보이 40F] ${currentMonth} 월별 리포트`);
     const content = encodeURIComponent(body);
     window.location.href = `mailto:${encodeURIComponent(to)}?subject=${subject}&body=${content}`;
 }
