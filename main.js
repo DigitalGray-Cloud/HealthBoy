@@ -73,11 +73,11 @@ const exerciseDB = {
 };
 
 const DEFAULT_FIREBASE_CONFIG = {
-    apiKey: 'AIzaSyD_efcwk8qCnJn2tV7b1zNBtMnwb1Ow_P8',
-    authDomain: 'ai-product-9194a.firebaseapp.com',
-    projectId: 'ai-product-9194a',
-    storageBucket: 'ai-product-9194a.firebasestorage.app',
-    messagingSenderId: '53649337918'
+    apiKey: 'AIzaSyDlbVNz_q1W1wJcVNfbs5hGQ7f9t14sLHw',
+    authDomain: 'healthboy-database.firebaseapp.com',
+    projectId: 'healthboy-database',
+    storageBucket: 'healthboy-database.firebasestorage.app',
+    messagingSenderId: '1092143659664'
 };
 
 function pickConfigValue(runtimeConfig, key) {
