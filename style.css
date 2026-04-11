@@ -854,3 +854,9 @@ header h1 {
     resize: vertical;
     font: inherit;
 }
+
+.brand-suffix {
+    font-size: 0.45em;
+    vertical-align: super;
+    letter-spacing: 0.04em;
+}
