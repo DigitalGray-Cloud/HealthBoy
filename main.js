@@ -294,13 +294,14 @@ function buildDetailText(items) {
         const timeMs = Number(w.createdAtMs) || Date.now();
         const when = formatDateTime(timeMs);
         const source = w.source === 'voice' ? '음성' : '직접입력';
+        const exerciseName = normalizeExerciseName(w.exercise);
         if (w.isRunning) {
             const distance = Number.isFinite(Number(w.distanceKm)) ? `${w.distanceKm}km` : '-';
             const speed = Number.isFinite(Number(w.speedKmh)) ? `${w.speedKmh}km/h` : '-';
-            return `${idx + 1}. [${when}] ${w.exercise} / 거리:${distance} / 속도:${speed} / 입력:${source}`;
+            return `${idx + 1}. [${when}] ${exerciseName} / 거리:${distance} / 속도:${speed} / 입력:${source}`;
         }
-        const weight = Number.isFinite(Number(w.weight)) ? `${w.weight}kg` : '맨몸';
-        return `${idx + 1}. [${when}] ${w.exercise} / ${weight} / ${w.reps}회 x ${w.sets}세트 / 입력:${source}`;
+        const weight = isBodyweightExercise(exerciseName) ? '맨몸' : formatWorkoutWeight({ ...w, exercise: exerciseName });
+        return `${idx + 1}. [${when}] ${exerciseName} / ${weight} / ${w.reps}회 x ${w.sets}세트 / 입력:${source}`;
     });
 
     return [
@@ -340,7 +341,7 @@ function parseWorkout(text) {
         normalized.match(/속도\s*(\d+(?:\.\d+)?)/i) ||
         normalized.match(/(\d+(?:\.\d+)?)\s*(km\/h|kph|키로\/시|킬로\/시)/i);
 
-    const weight = weightMatch ? parseFloat(weightMatch[1]) : null;
+    const weight = weightMatch ? parseFloat(weightMatch[1]) : 0;
     let reps = repsMatch ? parseInt(repsMatch[1], 10) : 10;
     let sets = setsMatch ? parseInt(setsMatch[1], 10) : 1;
     const distanceKm = distanceMatch ? parseFloat(distanceMatch[1]) : null;
@@ -383,7 +384,7 @@ function parseWorkout(text) {
             parsedWeight = numericTokens[0];
             reps = 10;
             sets = Math.max(1, Math.round(numericTokens[1]));
-        } else if (numericTokens.length === 1 && parsedWeight === null) {
+        } else if (numericTokens.length === 1 && (!Number.isFinite(parsedWeight) || parsedWeight === 0)) {
             parsedWeight = numericTokens[0];
         }
     }
@@ -398,7 +399,7 @@ function parseWorkout(text) {
     const createdAtMs = Date.now();
     return {
         exercise: exerciseName,
-        weight: isRunning ? null : parsedWeight,
+        weight: isRunning ? null : (Number.isFinite(parsedWeight) ? parsedWeight : 0),
         reps: isRunning ? 0 : reps,
         sets: isRunning ? 0 : sets,
         isRunning,
@@ -562,7 +563,7 @@ async function editWorkout(workout) {
         updates.reps = 0;
         updates.sets = 0;
     } else {
-        const nextWeight = parseOptionalNumber(prompt('무게(kg, 맨몸은 비움)', workout.weight ?? ''), workout.weight ?? null);
+        const nextWeight = parseOptionalNumber(prompt('무게(kg, 미입력 시 0)', workout.weight ?? 0), workout.weight ?? 0);
         if (nextWeight.cancelled) return;
         const nextReps = parseOptionalNumber(prompt('반복 횟수 (미입력 시 10)', workout.reps ?? 10), workout.reps ?? 10);
         if (nextReps.cancelled) return;
@@ -571,7 +572,7 @@ async function editWorkout(workout) {
         updates.isRunning = false;
         updates.distanceKm = null;
         updates.speedKmh = null;
-        updates.weight = nextWeight.value;
+        updates.weight = Number.isFinite(Number(nextWeight.value)) ? Number(nextWeight.value) : 0;
         updates.reps = Number(nextReps.value) || 10;
         updates.sets = Number(nextSets.value) || 1;
     }
