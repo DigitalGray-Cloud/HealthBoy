@@ -755,12 +755,71 @@ async function loadMasterDashboard() {
     masterDetailList.replaceChildren();
 }
 
+async function copyLegacyWorkouts(fromUserId, toUserId) {
+    const legacySnap = await getDocs(collection(db, 'users', fromUserId, 'workouts'));
+    const writes = legacySnap.docs.map((workoutDoc) => {
+        return setDoc(doc(db, 'users', toUserId, 'workouts', workoutDoc.id), {
+            ...workoutDoc.data(),
+            userId: toUserId,
+            migratedFromUserId: fromUserId,
+            migratedAt: serverTimestamp()
+        }, { merge: true });
+    });
+    await Promise.all(writes);
+}
+
+async function findLegacyUserDocForAuth(user) {
+    const email = String(user?.email || '').trim().toLowerCase();
+    if (!email) return null;
+
+    const userQuery = query(collection(db, 'users'), where('email', '==', email));
+    const snap = await getDocs(userQuery);
+    return snap.docs.find((docSnap) => docSnap.id !== user.uid) || null;
+}
+
+async function migrateLegacyUserDataToCurrentUser(user, legacyDocSnap) {
+    const providerIds = (user.providerData || []).map((p) => p.providerId);
+    const legacyData = legacyDocSnap.data() || {};
+    const mergedProfile = {
+        name: String(legacyData?.profile?.name || user.displayName || '').trim(),
+        age: legacyData?.profile?.age ?? null,
+        heightCm: legacyData?.profile?.heightCm ?? null,
+        weightKg: legacyData?.profile?.weightKg ?? null
+    };
+
+    await setDoc(doc(db, 'users', user.uid), {
+        ...legacyData,
+        email: user.email || legacyData.email || '',
+        displayName: user.displayName || legacyData.displayName || '',
+        photoURL: user.photoURL || legacyData.photoURL || '',
+        isAnonymous: Boolean(user.isAnonymous),
+        providerIds,
+        profile: mergedProfile,
+        migratedFromUserId: legacyDocSnap.id,
+        lastLoginAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    await copyLegacyWorkouts(legacyDocSnap.id, user.uid);
+
+    return {
+        ...legacyData,
+        profile: mergedProfile,
+        migratedFromUserId: legacyDocSnap.id
+    };
+}
+
 async function ensureUserProfile(user) {
     const userRef = doc(db, 'users', user.uid);
     const userSnap = await getDoc(userRef);
     const providerIds = (user.providerData || []).map((p) => p.providerId);
 
     if (!userSnap.exists()) {
+        const legacyDocSnap = await findLegacyUserDocForAuth(user);
+        if (legacyDocSnap) {
+            return migrateLegacyUserDataToCurrentUser(user, legacyDocSnap);
+        }
+
         const initialName = String(user.displayName || '').trim();
         await setDoc(userRef, {
             email: user.email || '',
@@ -840,6 +899,7 @@ async function editNicknameQuick() {
     }
 
     await setDoc(doc(db, 'users', currentUser.uid), {
+        displayName: nickname,
         profile: {
             ...currentProfile,
             name: nickname
@@ -1082,8 +1142,9 @@ function wireEvents() {
         await commitWorkout(workout);
     };
 
-    exerciseInput.onkeypress = async (e) => {
-        if (e.key !== 'Enter') return;
+    exerciseInput.onkeydown = async (e) => {
+        if (e.key !== 'Enter' || e.isComposing) return;
+        e.preventDefault();
         const input = exerciseInput.value.trim();
         if (!input) return;
         const workout = parseWorkout(input);
