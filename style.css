@@ -837,3 +837,15 @@ header h1 {
         grid-template-columns: 90px 1fr 44px;
     }
 }
+
+.edit-note-input {
+    width: 100%;
+    min-height: 120px;
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    color: #0f172a;
+    padding: 0.9rem 1rem;
+    border-radius: 10px;
+    resize: vertical;
+    font: inherit;
+}

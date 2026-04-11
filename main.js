@@ -142,6 +142,16 @@ const profileHeight = document.getElementById('profile-height');
 const profileWeight = document.getElementById('profile-weight');
 const saveProfileBtn = document.getElementById('save-profile-btn');
 const skipProfileBtn = document.getElementById('skip-profile-btn');
+const editWorkoutModal = document.getElementById('edit-workout-modal');
+const editExerciseName = document.getElementById('edit-exercise-name');
+const editWeightInput = document.getElementById('edit-weight');
+const editRepsInput = document.getElementById('edit-reps');
+const editSetsInput = document.getElementById('edit-sets');
+const editDistanceInput = document.getElementById('edit-distance');
+const editSpeedInput = document.getElementById('edit-speed');
+const editNoteInput = document.getElementById('edit-note');
+const saveWorkoutEditBtn = document.getElementById('save-workout-edit-btn');
+const cancelWorkoutEditBtn = document.getElementById('cancel-workout-edit-btn');
 const masterPanel = document.getElementById('master-panel');
 const masterRefreshBtn = document.getElementById('master-refresh-btn');
 const masterTotalUsers = document.getElementById('master-total-users');
@@ -163,6 +173,7 @@ let recognitionSilenceTimer = null;
 const VOICE_SILENCE_AUTO_STOP_MS = 1400;
 let lastVoiceEndedAtMs = null;
 let selectedDateKey = getLocalDateKey();
+let workoutBeingEdited = null;
 
 const CATEGORY_IMAGE_QUERIES = {
     가슴: ['barbell bench press gym', 'incline dumbbell press'],
@@ -538,58 +549,69 @@ function parseOptionalNumber(inputText, fallback) {
     return { cancelled: false, value: Number.isFinite(num) ? num : fallback };
 }
 
-async function editWorkout(workout) {
-    if (!currentUser || !workout?.id) return;
+function openWorkoutEditModal(workout) {
+    workoutBeingEdited = workout;
+    const normalizedName = normalizeExerciseName(workout.exercise || '');
+    const isRunning = Boolean(workout.isRunning);
 
-    const nextExercise = prompt('운동명을 입력하세요', workout.exercise || '');
-    if (nextExercise === null) return;
+    editExerciseName.value = normalizedName;
+    editWeightInput.value = isRunning ? '' : Number(workout.weight ?? 0);
+    editRepsInput.value = isRunning ? 0 : Number(workout.reps ?? 10);
+    editSetsInput.value = isRunning ? 0 : Number(workout.sets ?? 1);
+    editDistanceInput.value = isRunning ? String(workout.distanceKm ?? '') : '';
+    editSpeedInput.value = isRunning ? String(workout.speedKmh ?? '') : '';
+    editNoteInput.value = String(workout.note || '');
 
-    const exerciseName = String(nextExercise).trim() || workout.exercise || '기타 운동';
+    editWeightInput.parentElement.style.display = isRunning ? 'none' : '';
+    editRepsInput.parentElement.style.display = isRunning ? 'none' : '';
+    editSetsInput.parentElement.style.display = isRunning ? 'none' : '';
+    editDistanceInput.parentElement.style.display = isRunning ? '' : 'none';
+    editSpeedInput.parentElement.style.display = isRunning ? '' : 'none';
+    editWorkoutModal.style.display = 'block';
+}
+
+function closeWorkoutEditModal() {
+    workoutBeingEdited = null;
+    editWorkoutModal.style.display = 'none';
+}
+
+async function saveWorkoutEdit() {
+    if (!currentUser || !workoutBeingEdited?.id) return;
+
+    const rawExerciseName = String(editExerciseName.value || '').trim() || workoutBeingEdited.exercise || '기타 운동';
+    const exerciseName = normalizeExerciseName(rawExerciseName);
     const isRunning = /(런닝|러닝|달리기|조깅|러닝머신)/.test(exerciseName);
     const updates = {
         exercise: exerciseName,
+        note: String(editNoteInput.value || '').trim(),
         updatedAt: serverTimestamp()
     };
 
     if (isRunning) {
-        const nextDistance = parseOptionalNumber(prompt('거리(km)', workout.distanceKm ?? ''), workout.distanceKm ?? null);
-        if (nextDistance.cancelled) return;
-        const nextSpeed = parseOptionalNumber(prompt('속도(km/h)', workout.speedKmh ?? ''), workout.speedKmh ?? null);
-        if (nextSpeed.cancelled) return;
         updates.isRunning = true;
-        updates.distanceKm = nextDistance.value;
-        updates.speedKmh = nextSpeed.value;
+        updates.distanceKm = editDistanceInput.value ? Number(editDistanceInput.value) : null;
+        updates.speedKmh = editSpeedInput.value ? Number(editSpeedInput.value) : null;
         updates.weight = null;
         updates.reps = 0;
         updates.sets = 0;
     } else {
-        const nextWeight = parseOptionalNumber(prompt('무게(kg, 미입력 시 0)', workout.weight ?? 0), workout.weight ?? 0);
-        if (nextWeight.cancelled) return;
-        const nextReps = parseOptionalNumber(prompt('반복 횟수 (미입력 시 10)', workout.reps ?? 10), workout.reps ?? 10);
-        if (nextReps.cancelled) return;
-        const nextSets = parseOptionalNumber(prompt('세트 수', workout.sets ?? 1), workout.sets ?? 1);
-        if (nextSets.cancelled) return;
         updates.isRunning = false;
         updates.distanceKm = null;
         updates.speedKmh = null;
-        updates.weight = Number.isFinite(Number(nextWeight.value)) ? Number(nextWeight.value) : 0;
-        updates.reps = Number(nextReps.value) || 10;
-        updates.sets = Number(nextSets.value) || 1;
+        updates.weight = editWeightInput.value ? Number(editWeightInput.value) : 0;
+        updates.reps = editRepsInput.value ? Number(editRepsInput.value) : 10;
+        updates.sets = editSetsInput.value ? Number(editSetsInput.value) : 1;
     }
 
-    const nextNote = prompt('메모를 입력하세요', String(workout.note || ''));
-    if (nextNote === null) return;
-    updates.note = String(nextNote).trim();
-    updates.image = resolveExerciseImage(exerciseName, exerciseDB[exerciseName], `${Date.now()}`);
-    if (!isRunning && (!Number.isFinite(Number(updates.reps)) || Number(updates.reps) <= 0)) {
-        updates.reps = 10;
-    }
-    if (!isRunning && (!Number.isFinite(Number(updates.sets)) || Number(updates.sets) <= 0)) {
-        updates.sets = 1;
-    }
-    await updateDoc(doc(db, 'users', currentUser.uid, 'workouts', workout.id), updates);
-
+    updates.image = resolveExerciseImage(exerciseName, exerciseDB[exerciseName], String(Date.now()));
+    await updateDoc(doc(db, 'users', currentUser.uid, 'workouts', workoutBeingEdited.id), updates);
+    closeWorkoutEditModal();
     await loadTodayWorkouts();
+}
+
+async function editWorkout(workout) {
+    if (!currentUser || !workout?.id) return;
+    openWorkoutEditModal(workout);
 }
 
 async function editWorkoutNote(workout) {
@@ -1279,6 +1301,18 @@ function wireEvents() {
         await saveProfile(true);
     };
 
+    if (saveWorkoutEditBtn) {
+        saveWorkoutEditBtn.onclick = async () => {
+            await saveWorkoutEdit();
+        };
+    }
+
+    if (cancelWorkoutEditBtn) {
+        cancelWorkoutEditBtn.onclick = () => {
+            closeWorkoutEditModal();
+        };
+    }
+
     if (masterRefreshBtn) {
         masterRefreshBtn.onclick = async () => {
             await loadMasterDashboard();
@@ -1318,6 +1352,7 @@ function wireEvents() {
         if (event.target === reportModal) reportModal.style.display = 'none';
         if (event.target === profileModal) profileModal.style.display = 'none';
         if (event.target === manualModal) manualModal.style.display = 'none';
+        if (event.target === editWorkoutModal) closeWorkoutEditModal();
     };
 }
 
