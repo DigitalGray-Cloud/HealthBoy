@@ -182,6 +182,55 @@
                 </div>
             </div>
         </div>
+    
+        <section class="feedback-section">
+            <div class="section-header feedback-head">
+                <div>
+                    <h2>의견 및 피드백</h2>
+                    <p class="helper-text">헬스보이를 쓰면서 느낀 점을 남겨주세요. 이름을 비우면 자동으로 40층 사람 이름이 붙습니다.</p>
+                </div>
+                <img class="feedback-ai-visual" src="assets/robot-cut.png" alt="Health Boy AI 캐릭터">
+            </div>
+            <div class="feedback-shell">
+                <div class="feedback-form-card">
+                    <div class="feedback-form-grid">
+                        <input id="feedback-name" type="text" placeholder="이름 (비우면 자동 생성)">
+                        <input id="feedback-password" type="password" placeholder="비밀번호 (기본 1)">
+                    </div>
+                    <textarea id="feedback-content" class="edit-note-input" placeholder="의견이나 개선 요청을 남겨주세요"></textarea>
+                    <div class="feedback-form-actions">
+                        <button id="feedback-submit-btn" class="action-btn yes">피드백 등록</button>
+                        <p class="helper-text">수정/삭제 비밀번호는 <strong>1</strong>, 마스터 비밀번호는 <strong>8367</strong>입니다.</p>
+                    </div>
+                </div>
+                <div id="feedback-list" class="feedback-list"></div>
+            </div>
+        </section>
+
+        <section class="ai-models-section">
+            <div class="section-header ai-models-head">
+                <div>
+                    <h2>Powered by World-Class AI Models</h2>
+                    <p class="helper-text">Health Boy blends multiple leading AI systems to shape guidance, UX copy and future coaching features.</p>
+                </div>
+                <img class="ai-models-hero" src="assets/postlogin-target-cut-preview.png" alt="AI coach illustration">
+            </div>
+            <div class="ai-model-grid">
+                <article class="ai-model-card">
+                    <strong>OpenAI GPT</strong>
+                    <span>Workout intent parsing & natural coaching language</span>
+                </article>
+                <article class="ai-model-card">
+                    <strong>Anthropic Claude</strong>
+                    <span>Deep reasoning for routine structure & feedback synthesis</span>
+                </article>
+                <article class="ai-model-card">
+                    <strong>Google Gemini</strong>
+                    <span>Realtime multimodal support & future training assistant workflows</span>
+                </article>
+            </div>
+        </section>
+
     </div>
 
     <footer class="site-footer">

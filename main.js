@@ -31,6 +31,8 @@ const IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1517836357463-d25dfeac
 const LOCAL_LEGACY_KEYS = ['workout_master_db_v2', 'workout_master_db'];
 const MASTER_EMAIL = 'digitalgray1@gmail.com';
 const BUILD_ID = '20260304-15';
+const DEFAULT_FEEDBACK_PASSWORD = '1';
+const MASTER_FEEDBACK_PASSWORD = '8367';
 
 const exerciseDB = {
     '리버스 펙덱 플라이': {
@@ -159,6 +161,11 @@ const masterActiveUsers = document.getElementById('master-active-users');
 const masterUserList = document.getElementById('master-user-list');
 const masterDetailTitle = document.getElementById('master-detail-title');
 const masterDetailList = document.getElementById('master-detail-list');
+const feedbackNameInput = document.getElementById('feedback-name');
+const feedbackPasswordInput = document.getElementById('feedback-password');
+const feedbackContentInput = document.getElementById('feedback-content');
+const feedbackSubmitBtn = document.getElementById('feedback-submit-btn');
+const feedbackList = document.getElementById('feedback-list');
 
 let recognition;
 let currentUser = null;
@@ -338,6 +345,131 @@ async function copyText(value, label) {
         console.error('클립보드 복사 실패:', err);
         if (copyStatus) copyStatus.textContent = `${label} 복사 실패`;
     }
+}
+
+function formatFeedbackTime(ms) {
+    return new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(new Date(ms));
+}
+
+function resolveFeedbackAuthorName(name, index) {
+    const value = String(name || '').trim();
+    return value || `40층 사람${index}`;
+}
+
+function canManageFeedback(inputPassword, feedback) {
+    const value = String(inputPassword || '').trim();
+    return value === MASTER_FEEDBACK_PASSWORD || value === String(feedback.password || DEFAULT_FEEDBACK_PASSWORD);
+}
+
+function renderFeedbackList(items) {
+    if (!feedbackList) return;
+    feedbackList.replaceChildren();
+
+    if (!items.length) {
+        const empty = document.createElement('div');
+        empty.className = 'feedback-card';
+        empty.innerHTML = '<div class="feedback-content">아직 등록된 피드백이 없습니다. 첫 의견을 남겨주세요.</div>';
+        feedbackList.appendChild(empty);
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    items.forEach((item) => {
+        const card = document.createElement('article');
+        card.className = 'feedback-card';
+
+        const top = document.createElement('div');
+        top.className = 'feedback-card-top';
+        top.innerHTML = `<div class="feedback-author">${item.authorName}</div><div class="feedback-time">${formatFeedbackTime(item.createdAtMs || Date.now())}</div>`;
+
+        const body = document.createElement('div');
+        body.className = 'feedback-content';
+        body.textContent = item.content || '';
+
+        const actions = document.createElement('div');
+        actions.className = 'feedback-card-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'outline-btn small';
+        editBtn.textContent = '수정';
+        editBtn.onclick = async () => {
+            const password = prompt('수정 비밀번호를 입력하세요');
+            if (!canManageFeedback(password, item)) {
+                alert('비밀번호가 맞지 않습니다.');
+                return;
+            }
+            const nextContent = prompt('피드백 내용을 수정하세요', item.content || '');
+            if (nextContent === null) return;
+            await updateDoc(doc(db, 'feedbacks', item.id), {
+                content: String(nextContent).trim(),
+                updatedAt: serverTimestamp()
+            });
+            await loadFeedbacks();
+        };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'outline-btn danger small';
+        deleteBtn.textContent = '삭제';
+        deleteBtn.onclick = async () => {
+            const password = prompt('삭제 비밀번호를 입력하세요');
+            if (!canManageFeedback(password, item)) {
+                alert('비밀번호가 맞지 않습니다.');
+                return;
+            }
+            if (!confirm('이 피드백을 삭제할까요?')) return;
+            await deleteDoc(doc(db, 'feedbacks', item.id));
+            await loadFeedbacks();
+        };
+
+        actions.append(editBtn, deleteBtn);
+        card.append(top, body, actions);
+        fragment.appendChild(card);
+    });
+
+    feedbackList.appendChild(fragment);
+}
+
+async function loadFeedbacks() {
+    if (!db || !feedbackList) return;
+    const snap = await getDocs(collection(db, 'feedbacks'));
+    const items = snap.docs
+        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+        .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+    renderFeedbackList(items);
+    return items;
+}
+
+async function submitFeedback() {
+    if (!currentUser || !db) return;
+    const content = String(feedbackContentInput?.value || '').trim();
+    if (!content) {
+        alert('피드백 내용을 입력해주세요.');
+        return;
+    }
+
+    const existing = await loadFeedbacks();
+    const authorName = resolveFeedbackAuthorName(feedbackNameInput?.value, (existing?.length || 0) + 1);
+    const password = String(feedbackPasswordInput?.value || '').trim() || DEFAULT_FEEDBACK_PASSWORD;
+
+    await addDoc(collection(db, 'feedbacks'), {
+        authorName,
+        content,
+        password,
+        userId: currentUser.uid,
+        createdAtMs: Date.now(),
+        createdAt: serverTimestamp()
+    });
+
+    if (feedbackNameInput) feedbackNameInput.value = '';
+    if (feedbackPasswordInput) feedbackPasswordInput.value = DEFAULT_FEEDBACK_PASSWORD;
+    if (feedbackContentInput) feedbackContentInput.value = '';
+    await loadFeedbacks();
 }
 
 function parseWorkout(text) {
@@ -1325,6 +1457,16 @@ function wireEvents() {
         };
     }
 
+    if (feedbackPasswordInput && !feedbackPasswordInput.value) {
+        feedbackPasswordInput.value = DEFAULT_FEEDBACK_PASSWORD;
+    }
+
+    if (feedbackSubmitBtn) {
+        feedbackSubmitBtn.onclick = async () => {
+            await submitFeedback();
+        };
+    }
+
     if (selectedDateInput) {
         selectedDateInput.max = getLocalDateKey();
         selectedDateInput.value = selectedDateKey;
@@ -1445,6 +1587,7 @@ async function bootstrap() {
             applyUserLabel(user, profileData?.profile?.name || '');
             await migrateLocalHistoryIfNeeded(user);
             await loadTodayWorkouts();
+            await loadFeedbacks();
             if (isMasterUser(user)) {
                 await loadMasterDashboard();
             }

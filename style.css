@@ -860,3 +860,148 @@ header h1 {
     vertical-align: super;
     letter-spacing: 0.04em;
 }
+
+.feedback-section,
+.ai-models-section {
+    margin-top: 2.2rem;
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.2rem;
+    box-shadow: 0 10px 22px rgba(16, 40, 71, 0.08);
+}
+
+.feedback-head,
+.ai-models-head {
+    align-items: center;
+}
+
+.feedback-ai-visual,
+.ai-models-hero {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+}
+
+.feedback-shell {
+    display: grid;
+    gap: 1rem;
+}
+
+.feedback-form-card {
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem;
+}
+
+.feedback-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+}
+
+.feedback-form-grid input {
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid var(--line);
+    color: #0f172a;
+    padding: 0.9rem 1rem;
+    border-radius: 10px;
+}
+
+.feedback-form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.8rem;
+}
+
+.feedback-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.feedback-card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem;
+}
+
+.feedback-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.55rem;
+}
+
+.feedback-author {
+    font-weight: 800;
+    color: var(--navy);
+}
+
+.feedback-time {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.feedback-content {
+    color: #1e293b;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.feedback-card-actions {
+    margin-top: 0.8rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.ai-model-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-top: 1rem;
+}
+
+.ai-model-card {
+    display: grid;
+    gap: 0.45rem;
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem;
+}
+
+.ai-model-card strong {
+    color: var(--navy);
+}
+
+.ai-model-card span {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+@media (max-width: 600px) {
+    .feedback-form-grid,
+    .ai-model-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .feedback-form-actions,
+    .feedback-card-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .feedback-ai-visual,
+    .ai-models-hero {
+        width: 88px;
+        height: 88px;
+    }
+}
