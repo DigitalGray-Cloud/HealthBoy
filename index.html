@@ -194,10 +194,12 @@
             <div class="feedback-shell">
                 <div class="feedback-form-card">
                     <div class="feedback-form-stack">
-                        <label class="feedback-label" for="feedback-name">이름</label>
-                        <input id="feedback-name" type="text" placeholder="비우면 자동으로 40층 사람 이름이 생성됩니다">
-                        <label class="feedback-label" for="feedback-password">비밀번호</label>
-                        <input id="feedback-password" type="password" placeholder="수정/삭제에 사용할 비밀번호를 입력하세요" maxlength="4" inputmode="numeric">
+                        <div class="feedback-inline-row">
+                            <label class="feedback-label inline" for="feedback-name">이름 :</label>
+                            <input id="feedback-name" type="text" placeholder="비우면 자동으로 40층 사람 이름이 생성됩니다">
+                            <label class="feedback-label inline" for="feedback-password">비밀번호 :</label>
+                            <input id="feedback-password" type="password" placeholder="수정/삭제 비밀번호" maxlength="4" inputmode="numeric">
+                        </div>
                         <label class="feedback-label" for="feedback-content">의견</label>
                         <textarea id="feedback-content" class="edit-note-input" placeholder="의견이나 개선 요청을 남겨주세요"></textarea>
                     </div>

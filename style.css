@@ -900,8 +900,14 @@ header h1 {
 
 .feedback-form-stack {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.8rem;
+}
+
+.feedback-inline-row {
+    display: grid;
+    grid-template-columns: auto minmax(180px, 1fr) auto minmax(180px, 1fr);
+    gap: 0.7rem;
+    align-items: center;
 }
 
 .feedback-form-stack input,
@@ -914,15 +920,14 @@ header h1 {
     border-radius: 10px;
 }
 
-.feedback-form-stack .feedback-label:nth-of-type(3),
-.feedback-form-stack textarea {
-    grid-column: 1 / -1;
-}
-
 .feedback-label {
     font-size: 0.9rem;
     font-weight: 700;
     color: var(--navy);
+}
+
+.feedback-label.inline {
+    white-space: nowrap;
 }
 
 .feedback-form-actions {
@@ -1005,9 +1010,9 @@ header h1 {
         grid-template-columns: 1fr;
     }
 
-    .feedback-form-stack .feedback-label:nth-of-type(3),
-    .feedback-form-stack textarea {
-        grid-column: auto;
+    .feedback-inline-row {
+        grid-template-columns: 1fr;
+        align-items: stretch;
     }
 
     .feedback-form-actions,
