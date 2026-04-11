@@ -45,6 +45,11 @@ const exerciseDB = {
         imageQuery: 'barbell bench press',
         imageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Bench%20press.jpg'
     },
+    '핵스쿼트': {
+        category: '하체',
+        aliases: ['핵스쿼트', '해크스쿼트', '핵 스쿼트', '해크 스쿼트'],
+        imageQuery: 'hack squat machine'
+    },
     '스쿼트': {
         category: '하체',
         aliases: ['스쿼트', '하체운동', '백스쿼트'],
@@ -64,6 +69,11 @@ const exerciseDB = {
         category: '등',
         aliases: ['렛풀', '랫풀다운'],
         imageQuery: 'lat pulldown machine'
+    },
+    '풀업': {
+        category: '등',
+        aliases: ['풀업', '턱걸이', '친업'],
+        imageQuery: 'pull up bar gym'
     },
     '케이블 푸쉬 다운': {
         category: '팔',
@@ -228,6 +238,45 @@ function resolveExerciseImage(exerciseName, knownExercise, seedText = '') {
     return `https://source.unsplash.com/600x400/?${encodeURIComponent(`${picked},gym exercise`)}&sig=${sig}`;
 }
 
+function normalizeExerciseName(name) {
+    const trimmed = String(name || '').trim();
+    if (!trimmed) return '기타 운동';
+    if (/(턱걸이|풀업|친업)/.test(trimmed)) return '풀업';
+    return trimmed;
+}
+
+function isBodyweightExercise(name) {
+    return ['풀업'].includes(normalizeExerciseName(name));
+}
+
+function formatWorkoutWeight(workout) {
+    if (workout && workout.isRunning) return '';
+    if (isBodyweightExercise(workout && workout.exercise)) return '';
+    const weight = Number(workout && workout.weight);
+    return Number.isFinite(weight) ? String(weight) + 'kg' : '0kg';
+}
+
+function formatWorkoutPerformance(workout) {
+    if (workout && workout.isRunning) {
+        return Number.isFinite(Number(workout.speedKmh)) ? String(workout.speedKmh) + 'km/h' : '속도 미입력';
+    }
+    return String(workout && workout.reps || 0) + '회 × ' + String(workout && workout.sets || 0) + '세트';
+}
+
+function formatWorkoutNotePreview(note) {
+    const value = String(note || '').trim();
+    if (!value) return '';
+    return value.length > 42 ? value.slice(0, 42) + '...' : value;
+}
+
+function formatWorkoutForPrompt(workout) {
+    if (workout && workout.isRunning) {
+        return String(workout.exercise) + ' / 거리 ' + String(workout.distanceKm ?? '-') + 'km / 속도 ' + String(workout.speedKmh ?? '-') + 'km/h';
+    }
+    const weightLabel = isBodyweightExercise(workout && workout.exercise) ? '맨몸' : formatWorkoutWeight(workout);
+    return String(workout.exercise) + ' / ' + weightLabel + ' / ' + String(workout.reps) + '회 x ' + String(workout.sets) + '세트';
+}
+
 function formatDateTime(ms) {
     return new Intl.DateTimeFormat('ko-KR', {
         year: 'numeric',
@@ -316,7 +365,9 @@ function parseWorkout(text) {
             imageQuery: 'running treadmill gym'
         };
     } else if (!exerciseName) {
-        exerciseName = normalized.split(/\d/)[0].trim() || '기타 운동';
+        exerciseName = normalizeExerciseName(normalized.split(/\d/)[0].trim() || '기타 운동');
+    } else {
+        exerciseName = normalizeExerciseName(exerciseName);
     }
 
     if (!isRunning && !repsMatch && !setsMatch) {
@@ -356,6 +407,7 @@ function parseWorkout(text) {
         date: targetDateKey,
         month: targetDateKey.slice(0, 7),
         image: resolveExerciseImage(exerciseName, knownExercise, `${createdAtMs}`),
+        note: '',
         createdAtMs
     };
 }
@@ -390,11 +442,11 @@ function renderWorkouts(items) {
         const weight = document.createElement('span');
         if (w.isRunning) {
             weight.textContent = Number.isFinite(Number(w.distanceKm)) ? `${w.distanceKm}km` : '거리 미입력';
-            performance.textContent = Number.isFinite(Number(w.speedKmh)) ? `${w.speedKmh}km/h` : '속도 미입력';
         } else {
-            weight.textContent = Number.isFinite(Number(w.weight)) ? `${w.weight}kg` : '맨몸';
-            performance.textContent = `${w.reps}회 × ${w.sets}세트`;
+            const weightLabel = formatWorkoutWeight(w);
+            weight.textContent = weightLabel || '맨몸';
         }
+        performance.textContent = formatWorkoutPerformance(w);
 
         const actions = document.createElement('div');
         actions.className = 'card-actions';
@@ -406,6 +458,13 @@ function renderWorkouts(items) {
             await editWorkout(w);
         };
 
+        const noteBtn = document.createElement('button');
+        noteBtn.className = 'outline-btn small';
+        noteBtn.textContent = '메모';
+        noteBtn.onclick = async () => {
+            await editWorkoutNote(w);
+        };
+
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'outline-btn danger small';
         deleteBtn.textContent = '삭제';
@@ -413,9 +472,17 @@ function renderWorkouts(items) {
             await deleteWorkout(w.id);
         };
 
-        actions.append(editBtn, deleteBtn);
+        actions.append(noteBtn, editBtn, deleteBtn);
         stats.append(weight, performance);
-        info.append(title, stats, actions);
+        info.append(title, stats);
+        const notePreview = formatWorkoutNotePreview(w.note);
+        if (notePreview) {
+            const noteEl = document.createElement('p');
+            noteEl.className = 'card-note-preview';
+            noteEl.textContent = `메모: ${notePreview}`;
+            info.append(noteEl);
+        }
+        info.append(actions);
         card.append(img, info);
         fragment.appendChild(card);
     });
@@ -509,6 +576,9 @@ async function editWorkout(workout) {
         updates.sets = Number(nextSets.value) || 1;
     }
 
+    const nextNote = prompt('메모를 입력하세요', String(workout.note || ''));
+    if (nextNote === null) return;
+    updates.note = String(nextNote).trim();
     updates.image = resolveExerciseImage(exerciseName, exerciseDB[exerciseName], `${Date.now()}`);
     if (!isRunning && (!Number.isFinite(Number(updates.reps)) || Number(updates.reps) <= 0)) {
         updates.reps = 10;
@@ -517,6 +587,19 @@ async function editWorkout(workout) {
         updates.sets = 1;
     }
     await updateDoc(doc(db, 'users', currentUser.uid, 'workouts', workout.id), updates);
+
+    await loadTodayWorkouts();
+}
+
+async function editWorkoutNote(workout) {
+    if (!currentUser || !workout?.id) return;
+    const nextNote = prompt(formatWorkoutForPrompt(workout) + "\n\n메모를 입력하세요", String(workout.note || ""));
+    if (nextNote === null) return;
+
+    await updateDoc(doc(db, 'users', currentUser.uid, 'workouts', workout.id), {
+        note: String(nextNote).trim(),
+        updatedAt: serverTimestamp()
+    });
 
     await loadTodayWorkouts();
 }
