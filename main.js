@@ -461,7 +461,12 @@ async function submitFeedback() {
 
     const existing = await loadFeedbacks();
     const authorName = resolveFeedbackAuthorName(feedbackNameInput?.value, (existing?.length || 0) + 1);
-    const password = String(feedbackPasswordInput?.value || '').trim() || DEFAULT_FEEDBACK_PASSWORD;
+    const password = String(feedbackPasswordInput?.value || '').trim();
+    if (!password) {
+        alert('비밀번호를 입력해주세요.');
+        feedbackPasswordInput?.focus();
+        return;
+    }
 
     await addDoc(collection(db, 'feedbacks'), {
         authorName,
@@ -473,7 +478,7 @@ async function submitFeedback() {
     });
 
     if (feedbackNameInput) feedbackNameInput.value = '';
-    if (feedbackPasswordInput) feedbackPasswordInput.value = DEFAULT_FEEDBACK_PASSWORD;
+    if (feedbackPasswordInput) feedbackPasswordInput.value = '';
     if (feedbackContentInput) feedbackContentInput.value = '';
     await loadFeedbacks();
 }
@@ -1463,9 +1468,6 @@ function wireEvents() {
         };
     }
 
-    if (feedbackPasswordInput && !feedbackPasswordInput.value) {
-        feedbackPasswordInput.value = DEFAULT_FEEDBACK_PASSWORD;
-    }
 
     if (feedbackSubmitBtn) {
         feedbackSubmitBtn.onclick = async () => {
