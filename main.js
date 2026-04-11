@@ -488,13 +488,13 @@ function renderWorkouts(items) {
         stats.append(weight, performance);
         info.append(title, stats);
         const notePreview = formatWorkoutNotePreview(w.note);
-        if (notePreview) {
-            const noteEl = document.createElement('p');
-            noteEl.className = 'card-note-preview';
-            noteEl.textContent = `메모: ${notePreview}`;
-            info.append(noteEl);
+        const noteEl = document.createElement('p');
+        noteEl.className = 'card-note-preview';
+        noteEl.textContent = notePreview ? `메모: ${notePreview}` : '메모: 없음';
+        if (!notePreview) {
+            noteEl.classList.add('is-empty');
         }
-        info.append(actions);
+        info.append(noteEl, actions);
         card.append(img, info);
         fragment.appendChild(card);
     });

@@ -526,6 +526,7 @@ header h1 {
 
 .card-note-preview {
     margin-top: 0.55rem;
+    min-height: 52px;
     color: var(--text-secondary);
     font-size: 0.88rem;
     line-height: 1.45;
@@ -533,6 +534,10 @@ header h1 {
     border: 1px solid var(--line);
     border-radius: 10px;
     padding: 0.55rem 0.7rem;
+}
+
+.card-note-preview.is-empty {
+    color: #94a3b8;
 }
 
 .card-actions {
