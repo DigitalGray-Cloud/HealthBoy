@@ -1,13 +1,216 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HealthBoy</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 운동 마스터 - Workout Master</title>
+    <link rel="stylesheet" href="style.css?v=20260308-02">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-card">
+            <div class="auth-hero">
+                <img class="brand-illustration giant-login" src="assets/robot-cut.png" alt="근육 캐릭터 로고">
+            </div>
+            <div class="brand-meta auth-meta">
+                <span class="auth-badge">AI FITNESS</span>
+                <h1 class="brand-title">
+                    <span>AI 운동 마스터</span>
+                </h1>
+            </div>
+            <p class="auth-description">
+                지금은 게스트로 시작할 수 있지만, 나중에 AI 분석과 맞춤 추천을 받으려면 로그인이 좋습니다.
+            </p>
+            <div class="auth-actions">
+                <button id="google-login-btn" class="auth-btn google-btn">
+                    <i class="fa-brands fa-google"></i>
+                    Google로 로그인
+                </button>
+                <button id="kakao-login-btn" class="auth-btn kakao-btn">
+                    <i class="fa-solid fa-comment"></i>
+                    카카오로 로그인
+                </button>
+                <button id="guest-login-btn" class="auth-btn guest-btn">게스트로 시작</button>
+            </div>
+            <p id="auth-status" class="auth-status">로그인이 필요합니다.</p>
+        </div>
+    </div>
+
+    <div id="app" hidden>
+        <header>
+            <div class="header-tools">
+                <button id="manual-btn" class="manual-highlight-btn">매뉴얼</button>
+            </div>
+            <div class="app-hero">
+                <img class="brand-illustration giant-app" src="assets/postlogin-target-cut-preview.png" alt="로그인 후 대표 이미지">
+            </div>
+            <div class="brand-meta app-meta">
+                <span class="auth-badge">AI FITNESS</span>
+                <h1 class="app-title">
+                    <span>AI 운동 마스터</span>
+                </h1>
+            </div>
+            <p id="current-date"></p>
+            <div class="user-bar">
+                <span id="user-email"></span>
+                <button id="edit-nickname-btn" class="outline-btn small">닉네임 수정</button>
+                <button id="logout-btn" class="outline-btn">로그아웃</button>
+            </div>
+        </header>
+
+        <section class="input-section">
+            <div class="voice-btn-container">
+                <button id="mic-permission-btn" class="outline-btn small">마이크 권한 허용</button>
+                <button id="voice-btn" class="glow-btn">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <span id="voice-status">마이크 권한을 먼저 허용해주세요.</span>
+            </div>
+
+            <div class="entry-date-bar">
+                <span id="entry-date-label" class="helper-text"></span>
+                <button id="jump-today-btn" class="outline-btn small">오늘로</button>
+            </div>
+
+            <div class="text-input-container">
+                <input type="text" id="exercise-input" placeholder="예: 벤치프레스 80kg 8회 5세트">
+                <button id="add-btn">기록</button>
+            </div>
+        </section>
+
+        <section class="history-section">
+            <div class="section-header">
+                <h2>오늘의 운동 기록</h2>
+                <button id="report-btn" class="outline-btn">📊 월별 리포트</button>
+            </div>
+            <div id="workout-list" class="workout-grid">
+                <!-- 운동 카드들이 여기에 렌더링됩니다 -->
+            </div>
+        </section>
+
+        <section class="export-section">
+            <div class="section-header">
+                <h2>날짜별 상세</h2>
+                <div class="calendar-wrap">
+                    <input id="selected-date" type="date">
+                </div>
+            </div>
+            <div class="export-card">
+                <div class="export-head">
+                    <h3>상세</h3>
+                    <button id="copy-detail-btn" class="outline-btn small">상세 복사</button>
+                </div>
+                <p id="selected-date-label" class="helper-text"></p>
+                <textarea id="detail-output" class="export-output detail" readonly></textarea>
+            </div>
+            <p id="copy-status" class="helper-text"></p>
+        </section>
+
+        <section id="master-panel" class="master-panel" hidden>
+            <div class="section-header">
+                <h2>마스터 대시보드</h2>
+                <button id="master-refresh-btn" class="outline-btn">새로고침</button>
+            </div>
+            <div class="master-stats">
+                <div class="master-stat-card">
+                    <span>총 가입자</span>
+                    <strong id="master-total-users">0명</strong>
+                </div>
+                <div class="master-stat-card">
+                    <span>오늘 운동한 인원</span>
+                    <strong id="master-active-users">0명</strong>
+                </div>
+            </div>
+            <div class="master-grid">
+                <div class="master-list-panel">
+                    <h3>사용자 목록</h3>
+                    <div id="master-user-list" class="master-user-list"></div>
+                </div>
+                <div class="master-detail-panel">
+                    <h3 id="master-detail-title">사용자를 선택해주세요</h3>
+                    <div id="master-detail-list" class="master-detail-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 월별 리포트 모달 -->
+        <div id="report-modal" class="modal">
+            <div class="modal-content">
+                <span id="report-close-btn" class="close">&times;</span>
+                <div id="report-view">
+                    <!-- 리포트 내용이 여기에 렌더링됩니다 -->
+                </div>
+                <div class="email-section">
+                    <input type="email" id="email-input" placeholder="이메일 주소">
+                    <button id="send-email-btn">리포트 전송</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="manual-modal" class="modal">
+            <div class="modal-content manual-content">
+                <span id="manual-close-btn" class="close">&times;</span>
+                <h3>빠른 입력 매뉴얼</h3>
+                <div class="manual-block">
+                    <h4>1) 자연어 입력 규칙</h4>
+                    <p><strong>키로/킬로/kg</strong>는 모두 <strong>kg</strong>로 인식합니다.</p>
+                    <ul>
+                        <li><code>벤치프레스 40 10 5</code> → 40kg / 10회 / 5세트</li>
+                        <li><code>벤치프레스 40 5</code> → 40kg / 10회(기본) / 5세트</li>
+                        <li><code>벤치프레스 40키로 8회 4세트</code> → 40kg / 8회 / 4세트</li>
+                    </ul>
+                </div>
+                <div class="manual-block">
+                    <h4>2) 지난 기록 입력</h4>
+                    <ul>
+                        <li><strong>날짜별 상세</strong>에서 날짜를 고르면 해당 날짜로 저장됩니다.</li>
+                        <li>상단의 <strong>기록 대상 날짜</strong>를 확인하고 기록하세요.</li>
+                        <li><strong>오늘로</strong> 버튼으로 즉시 오늘 날짜로 복귀할 수 있습니다.</li>
+                    </ul>
+                </div>
+                <div class="manual-block">
+                    <h4>3) 애드센스 고품질 체크리스트</h4>
+                    <ul>
+                        <li>중복/얇은 페이지 대신, 한 주제의 독창적 콘텐츠를 충분히 제공합니다.</li>
+                        <li>사용자가 원하는 정보까지 탐색이 짧고 명확해야 합니다.</li>
+                        <li>광고가 본문보다 더 눈에 띄거나 과도하지 않도록 균형을 유지합니다.</li>
+                        <li>404, 감사/이탈 페이지 등 콘텐츠 가치가 낮은 페이지에는 광고를 피합니다.</li>
+                        <li>검색엔진/광고수익만 노린 키워드 낚시 대신 사용자 의도 중심으로 작성합니다.</li>
+                    </ul>
+                    <p class="helper-text">참고: 애드센스 한국 공식 블로그(2012-04-25, 2012-09-24) 품질 가이드 기준</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <p>Copyright © 2026 AI 운동 마스터. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="#" aria-label="서비스 소개">서비스 소개</a>
+            <a href="#" aria-label="개인정보처리방침">개인정보처리방침</a>
+            <a href="#" aria-label="문의">문의</a>
+        </div>
+    </footer>
+
+    <!-- 프로필 모달 (스킵 가능) -->
+    <div id="profile-modal" class="modal">
+        <div class="modal-content">
+            <h3>기본 정보 (선택)</h3>
+            <p class="helper-text">오늘은 스킵하고 내일 다시 설정할 수 있습니다.</p>
+            <div class="profile-form">
+                <input id="profile-name" type="text" placeholder="닉네임">
+                <input id="profile-age" type="number" placeholder="나이">
+                <input id="profile-height" type="number" placeholder="키(cm)">
+                <input id="profile-weight" type="number" placeholder="체중(kg)">
+            </div>
+            <div class="confirm-actions">
+                <button id="save-profile-btn" class="action-btn yes">저장</button>
+                <button id="skip-profile-btn" class="action-btn no">내일 설정할게요</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="main.js?v=20260308-02"></script>
+</body>
 </html>
