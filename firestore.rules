@@ -24,5 +24,9 @@ service cloud.firestore {
         allow write: if isOwner(userId);
       }
     }
+
+    match /feedbacks/{feedbackId} {
+      allow read, create, update, delete: if isSignedIn();
+    }
   }
 }
