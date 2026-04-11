@@ -1005,3 +1005,12 @@ header h1 {
         height: 88px;
     }
 }
+
+.feedback-action-password {
+    min-width: 150px;
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    color: #0f172a;
+    padding: 0.55rem 0.7rem;
+    border-radius: 10px;
+}

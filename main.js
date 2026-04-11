@@ -395,11 +395,17 @@ function renderFeedbackList(items) {
         const actions = document.createElement('div');
         actions.className = 'feedback-card-actions';
 
+        const passwordInput = document.createElement('input');
+        passwordInput.className = 'feedback-action-password';
+        passwordInput.type = 'password';
+        passwordInput.placeholder = '수정/삭제 비밀번호';
+        passwordInput.maxLength = 4;
+
         const editBtn = document.createElement('button');
         editBtn.className = 'outline-btn small';
         editBtn.textContent = '수정';
         editBtn.onclick = async () => {
-            const password = prompt('수정 비밀번호를 입력하세요');
+            const password = passwordInput.value.trim();
             if (!canManageFeedback(password, item)) {
                 alert('비밀번호가 맞지 않습니다.');
                 return;
@@ -417,7 +423,7 @@ function renderFeedbackList(items) {
         deleteBtn.className = 'outline-btn danger small';
         deleteBtn.textContent = '삭제';
         deleteBtn.onclick = async () => {
-            const password = prompt('삭제 비밀번호를 입력하세요');
+            const password = passwordInput.value.trim();
             if (!canManageFeedback(password, item)) {
                 alert('비밀번호가 맞지 않습니다.');
                 return;
@@ -427,7 +433,7 @@ function renderFeedbackList(items) {
             await loadFeedbacks();
         };
 
-        actions.append(editBtn, deleteBtn);
+        actions.append(passwordInput, editBtn, deleteBtn);
         card.append(top, body, actions);
         fragment.appendChild(card);
     });
