@@ -761,12 +761,12 @@ async function sendReportEmail() {
     });
 
     const body = [
-        `[운동 마스터] ${currentMonth} 리포트`,
+        `[헬스 보이] ${currentMonth} 리포트`,
         `총 운동일: ${daySet.size}일`,
         `총 세트: ${totalSets}세트`
     ].join('\n');
 
-    const subject = encodeURIComponent(`[운동 마스터] ${currentMonth} 월별 리포트`);
+    const subject = encodeURIComponent(`[헬스 보이] ${currentMonth} 월별 리포트`);
     const content = encodeURIComponent(body);
     window.location.href = `mailto:${encodeURIComponent(to)}?subject=${subject}&body=${content}`;
 }
