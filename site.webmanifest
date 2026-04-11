@@ -1,0 +1,20 @@
+{
+  "name": "Health Boy",
+  "short_name": "Health Boy",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#102847",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
