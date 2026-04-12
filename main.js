@@ -176,8 +176,10 @@ let micPermissionGranted = false;
 let recognitionShouldRun = false;
 let recognitionSessionActive = false;
 let recognitionTranscript = '';
+let recognitionPendingStart = false;
 let recognitionSilenceTimer = null;
-const VOICE_SILENCE_AUTO_STOP_MS = 1400;
+const VOICE_PERMISSION_STORAGE_KEY = 'healthboy_mic_permission_granted';
+const VOICE_SILENCE_AUTO_STOP_MS = 3200;
 let lastVoiceEndedAtMs = null;
 let selectedDateKey = getLocalDateKey();
 let workoutBeingEdited = null;
@@ -1243,14 +1245,43 @@ function setupSpeechRecognition() {
         }, VOICE_SILENCE_AUTO_STOP_MS);
     };
 
+    const persistPermissionState = (granted) => {
+        if (granted) {
+            localStorage.setItem(VOICE_PERMISSION_STORAGE_KEY, 'granted');
+            return;
+        }
+        localStorage.removeItem(VOICE_PERMISSION_STORAGE_KEY);
+    };
+
+    const syncVoiceButtonState = () => {
+        voiceBtn.classList.toggle('recording', recognitionSessionActive);
+        voiceBtn.classList.toggle('recording-pending', recognitionShouldRun && !recognitionSessionActive);
+    };
+
     const setPermissionState = (granted) => {
         micPermissionGranted = Boolean(granted);
+        persistPermissionState(micPermissionGranted);
         voiceBtn.disabled = !micPermissionGranted;
         micPermissionBtn.hidden = micPermissionGranted;
         if (!recognitionSessionActive) {
             voiceStatus.textContent = micPermissionGranted
                 ? '마이크 버튼으로 녹음 시작'
                 : '마이크 권한을 먼저 허용해주세요.';
+        }
+    };
+
+    const requestMicrophonePermission = async () => {
+        if (micPermissionGranted) return true;
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach((track) => track.stop());
+            setPermissionState(true);
+            return true;
+        } catch (err) {
+            console.error('마이크 권한 요청 실패:', err);
+            setPermissionState(false);
+            voiceStatus.textContent = '마이크 권한 허용이 필요합니다.';
+            return false;
         }
     };
 
@@ -1276,6 +1307,20 @@ function setupSpeechRecognition() {
 
     const stopListening = () => {
         recognitionShouldRun = false;
+        recognitionPendingStart = false;
+        clearSilenceTimer();
+        syncVoiceButtonState();
+        if (!recognitionSessionActive) {
+            if (micPermissionGranted) {
+                voiceStatus.textContent = '녹음 대기 취소';
+                setTimeout(() => {
+                    if (!recognitionShouldRun && !recognitionSessionActive && micPermissionGranted) {
+                        voiceStatus.textContent = '마이크 버튼으로 녹음 시작';
+                    }
+                }, 900);
+            }
+            return;
+        }
         try {
             recognition.stop();
         } catch (err) {
@@ -1284,39 +1329,62 @@ function setupSpeechRecognition() {
     };
 
     const startListening = () => {
-        if (!micPermissionGranted) {
-            voiceStatus.textContent = '먼저 마이크 권한을 허용해주세요.';
-            return;
-        }
-        recognitionShouldRun = true;
-        recognitionTranscript = '';
-        try {
-            recognition.start();
-        } catch (err) {
-            console.error('음성 인식 시작 실패:', err);
-            recognitionShouldRun = false;
-            voiceStatus.textContent = '이미 실행 중입니다.';
-        }
+        const begin = async () => {
+            recognitionShouldRun = true;
+            recognitionPendingStart = true;
+            recognitionTranscript = '';
+            voiceStatus.textContent = '마이크 준비 중...';
+            syncVoiceButtonState();
+            if (!micPermissionGranted) {
+                const granted = await requestMicrophonePermission();
+                if (!granted || !recognitionShouldRun) {
+                    recognitionPendingStart = false;
+                    syncVoiceButtonState();
+                    return;
+                }
+            }
+            if (!recognitionShouldRun) {
+                recognitionPendingStart = false;
+                syncVoiceButtonState();
+                return;
+            }
+            try {
+                recognition.start();
+            } catch (err) {
+                console.error('음성 인식 시작 실패:', err);
+                recognitionShouldRun = false;
+                recognitionPendingStart = false;
+                syncVoiceButtonState();
+                voiceStatus.textContent = '이미 실행 중입니다.';
+            }
+        };
+        begin();
     };
 
     recognition.onstart = () => {
+        recognitionPendingStart = false;
         recognitionSessionActive = true;
-        voiceBtn.classList.add('recording');
-        voiceStatus.textContent = '듣는 중...';
+        syncVoiceButtonState();
+        voiceStatus.textContent = '듣는 중... 다시 누르면 정지';
         armSilenceTimer();
     };
 
     recognition.onend = async () => {
         clearSilenceTimer();
+        recognitionPendingStart = false;
         recognitionSessionActive = false;
-        voiceBtn.classList.remove('recording');
+        syncVoiceButtonState();
         if (recognitionShouldRun) {
+            recognitionPendingStart = true;
+            syncVoiceButtonState();
             try {
                 recognition.start();
                 return;
             } catch (err) {
                 console.error('음성 인식 재시작 실패:', err);
                 recognitionShouldRun = false;
+                recognitionPendingStart = false;
+                syncVoiceButtonState();
             }
         }
         await commitRecognizedText();
@@ -1325,7 +1393,9 @@ function setupSpeechRecognition() {
     recognition.onerror = (event) => {
         clearSilenceTimer();
         recognitionShouldRun = false;
-        voiceBtn.classList.remove('recording');
+        recognitionPendingStart = false;
+        recognitionSessionActive = false;
+        syncVoiceButtonState();
         if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
             voiceStatus.textContent = '마이크 권한이 차단되었습니다. 브라우저 사이트 설정에서 마이크를 허용해주세요.';
             setPermissionState(false);
@@ -1349,24 +1419,20 @@ function setupSpeechRecognition() {
     };
 
     micPermissionBtn.onclick = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach((track) => track.stop());
-            setPermissionState(true);
-        } catch (err) {
-            console.error('마이크 권한 요청 실패:', err);
-            setPermissionState(false);
-            voiceStatus.textContent = '마이크 권한 허용이 필요합니다.';
-        }
+        await requestMicrophonePermission();
     };
 
     voiceBtn.onclick = () => {
-        if (recognitionShouldRun || recognitionSessionActive) {
+        if (recognitionShouldRun || recognitionSessionActive || recognitionPendingStart) {
             stopListening();
             return;
         }
         startListening();
     };
+
+    if (localStorage.getItem(VOICE_PERMISSION_STORAGE_KEY) === 'granted') {
+        setPermissionState(true);
+    }
 
     if (navigator.permissions?.query) {
         navigator.permissions.query({ name: 'microphone' }).then((status) => {
@@ -1375,9 +1441,11 @@ function setupSpeechRecognition() {
                 setPermissionState(status.state === 'granted');
             };
         }).catch(() => {
-            setPermissionState(false);
+            if (!micPermissionGranted) {
+                setPermissionState(false);
+            }
         });
-    } else {
+    } else if (!micPermissionGranted) {
         setPermissionState(false);
     }
 }
