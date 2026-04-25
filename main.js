@@ -707,11 +707,11 @@ function openWorkoutEditModal(workout) {
     editSpeedInput.value = isRunning ? String(workout.speedKmh ?? '') : '';
     editNoteInput.value = String(workout.note || '');
 
-    editWeightInput.parentElement.style.display = isRunning ? 'none' : '';
-    editRepsInput.parentElement.style.display = isRunning ? 'none' : '';
-    editSetsInput.parentElement.style.display = isRunning ? 'none' : '';
-    editDistanceInput.parentElement.style.display = isRunning ? '' : 'none';
-    editSpeedInput.parentElement.style.display = isRunning ? '' : 'none';
+    editWeightInput.style.display = isRunning ? 'none' : '';
+    editRepsInput.style.display = isRunning ? 'none' : '';
+    editSetsInput.style.display = isRunning ? 'none' : '';
+    editDistanceInput.style.display = isRunning ? '' : 'none';
+    editSpeedInput.style.display = isRunning ? '' : 'none';
     editWorkoutModal.style.display = 'block';
 }
 
@@ -723,35 +723,40 @@ function closeWorkoutEditModal() {
 async function saveWorkoutEdit() {
     if (!currentUser || !workoutBeingEdited?.id) return;
 
-    const rawExerciseName = String(editExerciseName.value || '').trim() || workoutBeingEdited.exercise || '기타 운동';
-    const exerciseName = normalizeExerciseName(rawExerciseName);
-    const isRunning = /(런닝|러닝|달리기|조깅|러닝머신)/.test(exerciseName);
-    const updates = {
-        exercise: exerciseName,
-        note: String(editNoteInput.value || '').trim(),
-        updatedAt: serverTimestamp()
-    };
+    try {
+        const rawExerciseName = String(editExerciseName.value || '').trim() || workoutBeingEdited.exercise || '기타 운동';
+        const exerciseName = normalizeExerciseName(rawExerciseName);
+        const isRunning = /(런닝|러닝|달리기|조깅|러닝머신)/.test(exerciseName);
+        const updates = {
+            exercise: exerciseName,
+            note: String(editNoteInput.value || '').trim(),
+            updatedAt: serverTimestamp()
+        };
 
-    if (isRunning) {
-        updates.isRunning = true;
-        updates.distanceKm = editDistanceInput.value ? Number(editDistanceInput.value) : null;
-        updates.speedKmh = editSpeedInput.value ? Number(editSpeedInput.value) : null;
-        updates.weight = null;
-        updates.reps = 0;
-        updates.sets = 0;
-    } else {
-        updates.isRunning = false;
-        updates.distanceKm = null;
-        updates.speedKmh = null;
-        updates.weight = editWeightInput.value ? Number(editWeightInput.value) : 0;
-        updates.reps = editRepsInput.value ? Number(editRepsInput.value) : 10;
-        updates.sets = editSetsInput.value ? Number(editSetsInput.value) : 1;
+        if (isRunning) {
+            updates.isRunning = true;
+            updates.distanceKm = editDistanceInput.value ? Number(editDistanceInput.value) : null;
+            updates.speedKmh = editSpeedInput.value ? Number(editSpeedInput.value) : null;
+            updates.weight = null;
+            updates.reps = 0;
+            updates.sets = 0;
+        } else {
+            updates.isRunning = false;
+            updates.distanceKm = null;
+            updates.speedKmh = null;
+            updates.weight = editWeightInput.value ? Number(editWeightInput.value) : 0;
+            updates.reps = editRepsInput.value ? Number(editRepsInput.value) : 10;
+            updates.sets = editSetsInput.value ? Number(editSetsInput.value) : 1;
+        }
+
+        updates.image = resolveExerciseImage(exerciseName, exerciseDB[exerciseName], String(Date.now()));
+        await updateDoc(doc(db, 'users', currentUser.uid, 'workouts', workoutBeingEdited.id), updates);
+        closeWorkoutEditModal();
+        await loadTodayWorkouts();
+    } catch (error) {
+        console.error('운동 기록 수정 실패:', error);
+        alert('운동 기록 수정 중 문제가 발생했습니다. 다시 시도해주세요.');
     }
-
-    updates.image = resolveExerciseImage(exerciseName, exerciseDB[exerciseName], String(Date.now()));
-    await updateDoc(doc(db, 'users', currentUser.uid, 'workouts', workoutBeingEdited.id), updates);
-    closeWorkoutEditModal();
-    await loadTodayWorkouts();
 }
 
 async function editWorkout(workout) {
