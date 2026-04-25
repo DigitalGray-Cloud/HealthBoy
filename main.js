@@ -550,12 +550,13 @@ function parseWorkout(text) {
         if (!Number.isFinite(sets) || sets <= 0) sets = 1;
     }
 
+    const isBodyweight = !isRunning && isBodyweightExercise(exerciseName);
     const now = new Date();
     const targetDateKey = selectedDateKey || getLocalDateKey(now);
     const createdAtMs = Date.now();
     return {
         exercise: exerciseName,
-        weight: isRunning ? null : (Number.isFinite(parsedWeight) ? parsedWeight : 0),
+        weight: isRunning || isBodyweight ? null : (Number.isFinite(parsedWeight) ? parsedWeight : 0),
         reps: isRunning ? 0 : reps,
         sets: isRunning ? 0 : sets,
         isRunning,
@@ -698,16 +699,17 @@ function openWorkoutEditModal(workout) {
     workoutBeingEdited = workout;
     const normalizedName = normalizeExerciseName(workout.exercise || '');
     const isRunning = Boolean(workout.isRunning);
+    const isBodyweight = isBodyweightExercise(normalizedName);
 
     editExerciseName.value = normalizedName;
-    editWeightInput.value = isRunning ? '' : Number(workout.weight ?? 0);
+    editWeightInput.value = isRunning || isBodyweight ? '' : Number(workout.weight ?? 0);
     editRepsInput.value = isRunning ? 0 : Number(workout.reps ?? 10);
     editSetsInput.value = isRunning ? 0 : Number(workout.sets ?? 1);
     editDistanceInput.value = isRunning ? String(workout.distanceKm ?? '') : '';
     editSpeedInput.value = isRunning ? String(workout.speedKmh ?? '') : '';
     editNoteInput.value = String(workout.note || '');
 
-    editWeightInput.style.display = isRunning ? 'none' : '';
+    editWeightInput.style.display = isRunning || isBodyweight ? 'none' : '';
     editRepsInput.style.display = isRunning ? 'none' : '';
     editSetsInput.style.display = isRunning ? 'none' : '';
     editDistanceInput.style.display = isRunning ? '' : 'none';
@@ -727,6 +729,7 @@ async function saveWorkoutEdit() {
         const rawExerciseName = String(editExerciseName.value || '').trim() || workoutBeingEdited.exercise || '기타 운동';
         const exerciseName = normalizeExerciseName(rawExerciseName);
         const isRunning = /(런닝|러닝|달리기|조깅|러닝머신)/.test(exerciseName);
+        const isBodyweight = isBodyweightExercise(exerciseName);
         const updates = {
             exercise: exerciseName,
             note: String(editNoteInput.value || '').trim(),
@@ -744,7 +747,7 @@ async function saveWorkoutEdit() {
             updates.isRunning = false;
             updates.distanceKm = null;
             updates.speedKmh = null;
-            updates.weight = editWeightInput.value ? Number(editWeightInput.value) : 0;
+            updates.weight = isBodyweight ? null : (editWeightInput.value ? Number(editWeightInput.value) : 0);
             updates.reps = editRepsInput.value ? Number(editRepsInput.value) : 10;
             updates.sets = editSetsInput.value ? Number(editSetsInput.value) : 1;
         }

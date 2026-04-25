@@ -758,6 +758,13 @@ header h1 {
     margin-bottom: 1rem;
 }
 
+.edit-field-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #334155;
+    margin-top: 0.15rem;
+}
+
 .profile-form input {
     width: 100%;
     background: #f8fafc;
